@@ -112,7 +112,7 @@ boxplot(diameters2, col = rainbow(5), main = "Boxplot des largeurs d'os", cex.ma
 
 
 ```{r}
-pca.birds <- dudi.pca(df = birds[,2:11], scannf = FALSE, nf = 2)
+pca.birds <- dudi.pca(df = birds[, 2:11], scannf = FALSE, nf = 2)
 summary(pca.birds)
 s.corcircle(pca.birds$co, xax =1, yax = 2)
 ```
@@ -120,6 +120,17 @@ s.corcircle(pca.birds$co, xax =1, yax = 2)
 ```{r pco}
 pco.birds <- dudi.pco(dist(birds), scannf = FALSE)
 summary(pco.birds)
+```
+
+```{r tab of mean per ecologic group}
+meantab <-  aggregate(birds[,2:11], list(birds$type), mean); colnames(meantab)[1] <- 'ecogroups'
+mediantab <- aggregate(birds[,2:11], list(birds$type), median); colnames(mediantab)[1] <- 'ecogroups'
+
+coa <- dudi.coa(meantab[,2:11], scannf = FALSE, nf = 2)
+summary(coa)
+rownames(coa$co)
+score(coa)
+scatter(coa)
 ```
 
 
