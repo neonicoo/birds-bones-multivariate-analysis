@@ -1,0 +1,100 @@
+---
+title: "Bird's bones"
+author: Nicolas Mendiboure 4BiM
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction au sujet :
+
+Il existe un très grand nombre d'espèces d'oiseaux différentes telles que les canards, les autruches, les pinguins ou les pigeons etc... Certains parmi eux sont capable de voler, d'autres de nager à la surface de l'eau où en profondeur, ou bien encore de courrir vite pour attraper une proie ou fuir un prédateur. Ainsi selon leur milieu de vie et leurs habitudes de vie, les oiseaux étudier dans ce jeu de donées ont été classés selon six groupes écologiques différents :
+
+1. Les oiseaux nageurs (SW);
+2. Les oiseaux échassiers ou limicoles (W);
+3. Les oiseaux terrestres (T);
+4. Les oiseaux "raptors" (R);
+5. Les oiseaux grimpeurs (P);
+6. Les oiseaux Chanteurs (SO).
+
+
+Par ailleurs tous les oiseaux appartenant à des groupes écologiques différents présentes des caractéristiques et apparences différentes. Les oiseaux volant possèdes de grandes ailes, les échassiers ont de grandes pattes etc... Or il existe un attribut que nous pouvons comparer chez chaque catégorie d'oiseaux, il s'agit des os. Ainsi en tant que spécialiste des données et des analyses en biostatistiques, nous allons chercher à voir s'il existe une relation entre les différents groupes écologiques d'oiseaux et la forme de leurs os. Nous pourrons aussi regarder si ces différentes tailles d'os sont corrélée entre elle, par exemple savoir si il y a une relation entre la taille de l'os du fémur et celle de l'humérus. 
+
+Pour ce faire 10 mesures ont été faites sur 420 oiseaux différents. Plus précisément, les mesures ont été prises sur des squelettes d'oiseaux provenant du Musée Naturel d'Histoire de Los Angeles, on y trouves notament 21 ordres, 153 genres et 254 éspèces d'oiseaux différentes.
+
+Les 10 mesures sont les suivantes (en milimètre) :
+
+1. Longueur Humérus ;
+2. Diamètre Humérus ;
+3. Longueur avant bras (Ulna) ;
+4. Diamètr Ulna ;
+5. Longueur Fémur ;
+6. Diamètre Fémur ;
+7. Longueur Tibiotarse ;
+8. Diamètre Tibiotarse ;
+9. Longeur Tarso-mététarse ;
+10. Diamètre Tarso-métatarse.
+
+Ce jeu de données est fourni par le Dr. D.Liu du Musée Naturel d'Hisoire de Pékin.
+
+# Visualisation des données :
+
+Il faut s'assurer de bien effacer les variables stockées dans R avant de commencer :
+
+```{r rm var}
+rm(list=ls())
+```
+
+
+On charge tout d'abord les libraries dont nous allons avoir besoin pour la suite de ce devoir :
+
+```{r libraries, message=FALSE}
+library(ade4)
+library(adegraphics)
+```
+
+
+```{r datas loading}
+bird <- read.csv("bird.csv", sep = ",", header = TRUE) #On stocke le dataset brut dans bird
+bird2 <- bird[complete.cases(bird),] # On enlève les lignes où il y a des "Na"
+sum(is.na(bird2)) # On a bien éliminé les "Na"
+
+# On enlève la colonne "type" car elle contient des valeurs non numériques
+# On enlève également la colonne "id" qui n'est pas une variable en soit
+bird3 <- subset(bird2, select = -c(id,type)) 
+names(bird3)
+```
+```{r création subsets}
+lengths <- subset(bird3, select = c(huml, ulnal, feml, tibl, tarl))
+diameters <- subset(bird3, select = c(humw, ulnaw, femw, tibw, tarw))
+```
+
+
+Premières visualisations de nos données :
+
+```{r plots 1}
+# On fait un pairplot des longeurs uniquement :
+pairs(lengths , pch = 4, las = 1, lower.panel = NULL)
+
+par(mfrow = c(1,2))
+boxplot(lengths, col = rainbow(5), main = "Boxplot des longeurs d'os", cex.main = 0.75)
+boxplot(diameters, col = rainbow(5), main = "Boxplot des largeurs d'os", cex.main = 0.75)
+# Attention aux outliers
+```
+
+
+# Analyses Multivariées :
+
+## 1.Analyse en composante principales  (ACP) :
+
+
+```{r}
+pcabird <- dudi.pca(df = bird3, scannf = FALSE, nf = 2)
+summary(pcabird)
+s.corcircle(pcabird$co, xax =1, yax = 2)
+```
+
+
+
