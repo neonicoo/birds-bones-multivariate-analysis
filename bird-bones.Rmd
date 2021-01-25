@@ -127,18 +127,35 @@ s.corcircle(pca.birds$c1, xax =1, yax = 2)
 
 ```{r tab of mean per ecologic group}
 birds2 = birds[-c(index),] # On enlève les lignes avec des outliers (les mêmes que précédement)
-meantab <-  aggregate(birds2[,2:11], list(birds2$type), mean); colnames(meantab)[1] <- 'ecogroups'
-mediantab <- aggregate(birds2[,2:11], list(birds2$type), median); colnames(mediantab)[1] <- 'ecogroups'
-
+meantab <-  aggregate(birds2[,2:11], list(birds2$type), mean)
+colnames(meantab)[1] <- 'ecogroups'
+meantab$ecogroups <- as.numeric(as.factor(meantab$ecogroups))
 ```
 
 
 
 
 ```{r}
-coa.birds <- dudi.coa(meantab[,2:11], scannf = FALSE, nf = 2)
+coa.birds <- dudi.coa(meantab[2: 10], scannf = FALSE, nf = 2)
 summary(coa.birds)
 rownames(coa.birds$co)
-scatter(coa)
+scatter(coa.birds)
+```
+
+```{r dendrogram }
+dbirds <- round(dist(meantab), 3)
+pco.birds <- dudi.pco(dbirds, scannf = FALSE)
+summary(pco.birds)
+#scatter(pco.birds)
+
+clusty <- hclust(dbirds, "complete")
+par(mfrow = c(1, 2))
+
+plot(clusty, main = "Dendrogram of ecologic classes of birds", cex.main = 0.85, cex = 0.75, xlab = "")
+
+plot(rev(clusty$height), type = 'l', 
+     main = "Decreasing heights of the dendogram",
+     ylab = "height", xlab = "", las = 1,
+     cex.main = 0.85)
 ```
 
