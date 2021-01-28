@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction au sujet :
 
+Source du jeu de données : https://www.kaggle.com/zhangjuefei/birds-bones-and-living-habits
+
 Il existe un très grand nombre d'espèces d'oiseaux différentes telles que les canards, les autruches, les pinguins ou les pigeons etc... 
 Certains parmi eux sont capable de voler, d'autres de nager à la surface de l'eau où en profondeur, ou bien encore de courrir vite pour attraper une proie ou fuir un prédateur. 
 Ainsi selon leur milieu de vie et leurs habitudes de vie, les oiseaux étudier dans ce jeu de donées ont été classés selon six groupes écologiques différents :
@@ -59,14 +61,16 @@ library(ade4)
 library(adegraphics)
 ```
 
+Nous chargeons maintenant nos données dans une varible *birds*, qu'il est possible de visualiser avec la commande *View(birds)*. Ensuite il faut s'assurer que nos jeu de données est complet, c'est à dire que chaque individu possède une valeur respective pour chaque variable. Pour se faire nous allons supprimer les lignes (et donc individus) qui possèdent des "Na" comme valeur grâce à la commande : *birds[complete.cases(birds),]*. En effet comme nous avons un total de 420 individus, nous pouvons nous permettre d'en enlever quelque un. On vérifie avec la commande *sum(is.na(birds))* que nous avons bien enlevé tous les "Na" du jeu. 
 
 ```{r datas loading}
-birds <- read.csv("bird.csv", sep = ",", header = TRUE) #On stocke le dataset brut dans bird
-birds <- birds[complete.cases(birds),] # On enlève les lignes où il y a des "Na")
-sum(is.na(birds)) # On a bien éliminé les "Na"
+birds <- read.csv("bird.csv", sep = ",", header = TRUE)
+birds <- birds[complete.cases(birds),]
+sum(is.na(birds)) == 0
 names(birds)
 ```
-```{r filtrer les outliers}
+
+```{r filtrer les outliers, include=FALSE}
 filter_outliers <- function(df, limit){
   index <- c()
   for (row in 1:dim(df)[1]){
@@ -82,9 +86,9 @@ filter_outliers <- function(df, limit){
   return(list(df, index))
 }
 ```
+On peut commencer par représenter nos données sur un boxplot. On voit tout de suite qu'il y a une hétérogénéité des moyennes et des variances entre nos 10 variables, avec notamment 2 groupes distincts de mesures. Cela est cohérent avec la réalité car les longueurs d'os sont logiquement plus élevées que les diamètres des os. Afin de replacer l'ensemble de nos données sur une homogénéité des moyennes et des variances, nous allons **centrer - réduire** notre jeu de données avec la commande *scale(bones)* où *bones* représente nos 10 mesures (et donc nos 10 variables numériques). Le centrage - réduction permet d'avoir une moyenne centrée sur 0 et un variance réduire à 1, il suffit d'appliquer la formule suivante : $X = \frac{X - \mu}{\sigma}$. Ainsi il est possible d'observer le résultat du centrage-réduction sur le boxplot du milieu. On remarquera que l'unité en abscisse n'est plus la même et que sont échelle à changé.  
 
-
-## Premières visualisations de nos données :
+Par ailleurs nous observons qu'il existe des points aberrants, appelés aussi *outliers*. Pour les éliminer, nous avons créé une fonction *filter_outliers* (disponible dans le code R) qui stocke dans un index les lignes  comportant des outliers définis selon un seuil arbitraire (dans notre cas : 3). La fonction applique ensuite une suppression des lignes indexées sur le jeu de données voulu et renvoie le jeu et l'indexe avec les lignes comportant des outliers. Le résultat de cette opération est visible dans le 3ème boxplot le plus à droite. 
 
 ```{r centrage réduction }
 par(mfrow = c(1, 3), mar = c(5, 5, 4, 2) + 0.1 )
@@ -117,16 +121,25 @@ boxplot(filtered_sd_bones, horizontal = T, las = 1,
 
 ## 1.Analyse en composante principales  (ACP) :
 
+Lorsque l'on fait le *summary* de l'ACP, on peut d'abord jeter un œil sur les valeurs propres obtenues. Celui-ci nous dit qu'il y a 10 valeurs propres en tout, seul 5 d'entre elles sont montrées.
+
+Les valeurs propres nous renseignent sur la fraction de l’inertie totale prise en compte par chaque axe. Elles sont rangées par convention dans l’ordre décroissant. Le premier axe représente 87 % de l'inertie totale et le deuxième axe représente 6.5% de l'inertie. Si l'on ne conserve que ces deux valeurs propres là, leur somme (ou cumul) étant égale à 93% est suffisant pour représenter l'inertie totale, il est possible de représenter la projection de nos 10 variables dans un repère définit par nos 2 axes principaux grâce à la commande *s.corcircle*. 
+
+Sur le premier facteur nos 10 variables pointent toutes du même coté. Cela est dû à "l'effet taille" lorsque les variables sont toutes corrélées positivement entres elles. Lorsque nous avons un angle aigu entre deux flèches, cela signifie que nos 2 variables en questions sont très corrélées. C'est par exemple le cas entre la longueur de l'Ulna et son diamètre, ou entre la longueur de l'humérus et son diamètre, ce qui est plutôt cohérent d'un point de vue anatomique. Plus l'angle entre deux variables est faible et plus les variables sont corrélées, avec un coefficient de corrélation $r^{2} \approx 1$
+
+Pour le deuxième facteur, on voit que nous avons autant de variables de part et d'autre de l'axe horizontal, cinq au dessus et cinq dessous. En dessous nous avons les variables relatives à l'os ulna et à l'humérus ce qui correspondrait plutôt au membre supérieur des oiseaux tandis qu'au dessus de l'axe horizontal nous voyons les variables concernant les mesures sur les os du fémur et du tibiotarse et du tarso-métatarse (pied), soit au membre inférieur de l'oiseau. 
+
 
 ```{r ACP}
 pca.birds <- dudi.pca(df = filtered_sd_bones, scannf = FALSE, nf = 2)
 summary(pca.birds)
+par(mfrow = c(1, 2))
 s.corcircle(pca.birds$c1, xax =1, yax = 2)
+#scatter(pca.birds)
 ```
 
-
 ```{r tab of mean per ecologic group}
-birds2 = birds[-c(index),] # On enlève les lignes avec des outliers (les mêmes que précédement)
+birds2 = birds[-c(index),] # On enlève les lignes avec des outliers
 meantab <-  aggregate(birds2[,2:11], list(birds2$type), mean)
 colnames(meantab)[1] <- 'ecogroups'
 meantab$ecogroups <- as.numeric(as.factor(meantab$ecogroups))
