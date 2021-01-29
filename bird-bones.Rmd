@@ -82,34 +82,32 @@ filter_outliers <- function(df, limit){
       }
     }
   }
-  df <- df[-c(index),]
-  return(list(df, index))
+  return(index)
 }
 ```
 On peut commencer par représenter nos données sur un boxplot. On voit tout de suite qu'il y a une hétérogénéité des moyennes et des variances entre nos 10 variables, avec notamment 2 groupes distincts de mesures. Cela est cohérent avec la réalité car les longueurs d'os sont logiquement plus élevées que les diamètres des os. Afin de replacer l'ensemble de nos données sur une homogénéité des moyennes et des variances, nous allons **centrer - réduire** notre jeu de données avec la commande *scale(bones)* où *bones* représente nos 10 mesures (et donc nos 10 variables numériques). Le centrage - réduction permet d'avoir une moyenne centrée sur 0 et un variance réduire à 1, il suffit d'appliquer la formule suivante : $X = \frac{X - \mu}{\sigma}$. Ainsi il est possible d'observer le résultat du centrage-réduction sur le boxplot du milieu. On remarquera que l'unité en abscisse n'est plus la même et que sont échelle à changé.  
 
 Par ailleurs nous observons qu'il existe des points aberrants, appelés aussi *outliers*. Pour les éliminer, nous avons créé une fonction *filter_outliers* (disponible dans le code R) qui stocke dans un index les lignes  comportant des outliers définis selon un seuil arbitraire (dans notre cas : 3). La fonction applique ensuite une suppression des lignes indexées sur le jeu de données voulu et renvoie le jeu et l'indexe avec les lignes comportant des outliers. Le résultat de cette opération est visible dans le 3ème boxplot le plus à droite. 
 
+
 ```{r centrage réduction }
 par(mfrow = c(1, 3), mar = c(5, 5, 4, 2) + 0.1 )
-bones <- birds[2:11] # contient toutes les mesures d'os des oiseaux -10 en tout)
-sd_bones <- scale(bones) # standardisation des mesures
-filtered_sd_bones <- filter_outliers(sd_bones, limit = 3)[[1]]; # on enlève les outliers
-index <- filter_outliers(sd_bones, limit = 4)[[2]] # on stocke les lignes enlevees dans sd_bones pour les enlever dans le jeu original si besoin 
 
 
-boxplot(bones, horizontal = T, las = 1, 
+boxplot(birds[2:11], horizontal = T, las = 1, 
         main = "Avant centrage et reduction",
         cex.main = 0.75,
         col = "lightblue")
 
 
-boxplot(sd_bones, horizontal = T, las = 1,
+boxplot(scale(birds[2:11]), horizontal = T, las = 1,
         main = "Apres centrage et reduction",
         cex.main = 0.75,
         col = "lightblue")
 
-boxplot(filtered_sd_bones, horizontal = T, las = 1,
+index <- filter_outliers(scale(birds[2:10]), limit = 3)
+
+boxplot(scale(birds[2:10])[-c(index),], horizontal = T, las = 1,
         main = "Apres suppression des outliers",
         cex.main = 0.75,
         col = "lightblue")
@@ -129,36 +127,49 @@ Sur le premier facteur nos 10 variables pointent toutes du même coté. Cela est
 
 Pour le deuxième facteur, on voit que nous avons autant de variables de part et d'autre de l'axe horizontal, cinq au dessus et cinq dessous. En dessous nous avons les variables relatives à l'os ulna et à l'humérus ce qui correspondrait plutôt au membre supérieur des oiseaux tandis qu'au dessus de l'axe horizontal nous voyons les variables concernant les mesures sur les os du fémur et du tibiotarse et du tarso-métatarse (pied), soit au membre inférieur de l'oiseau. 
 
+```{r birds2}
+birds2 <- birds[, 2:12]
+birds2[, 1:10] <- scale(birds2[, 1:10])
+colnames(birds2)[11] <- 'groups'
+birds2 <- birds2[-c(index),]
+```
 
 ```{r ACP}
-pca.birds <- dudi.pca(df = filtered_sd_bones, scannf = FALSE, nf = 2)
+pca.birds <- dudi.pca(df = birds2[1:10] , scannf = FALSE, nf = 2)
 summary(pca.birds)
 par(mfrow = c(1, 2))
 s.corcircle(pca.birds$c1, xax =1, yax = 2)
 #scatter(pca.birds)
 ```
-## 2. Création d'une table de contingence :
+## 2. Between-Class Analysis (BCA) and Linear Discriminant Analysis (LDA) :
 
-Pour la suite de ce devoir nous voudrions regrouper les individus par groupes écologiques afin de voir si des groupes peuvent êtres caractérisés par certaines variables. Dans notre jeu de données actuel, la dernière variable *birds$type* indique de le groupe écologique auquel l'individu appartient. Une idée serait de regrouper tous les individus d'un même groupe en effectuant par exemple la moyenne de leur valeurs pour chaque attribut respectif. On obtiendrait donc une table de contingence de taille $6 * 11$ (*nombre de groupes * * *nombre de variables*). Dans le cas où l'on ferait une moyenne, on peut considérer que celles-ci soit assez représentatives car nous avons un grand nombre d'individus par groupe et que les valeurs aberrantes (outliers) ont été supprimées précédemment et n'affecteront donc pas les moyennes calculées. Pour obtenir cette table on peut utiliser la fonction *aggregate()*. 
+```{r BCA}
+bca <- bca(pca.birds, as.factor(birds2$groups), scannf = FALSE, nf = 2)
+summary(bca)
+bca$tab
+plot(bca)
+```
+
+```{r LDA}
+lda <- discrimin(pca.birds, as.factor(birds2$groups), scannf = FALSE, nf = 2)
+summary(lda)
+plot(lda)
+```
+
+
+## 3. Regroupement des valeurs par groupes écologiques :
+
+Pour la suite de ce devoir nous voudrions regrouper les individus par groupes écologiques afin de voir si des groupes peuvent êtres caractérisés par certaines variables. Dans notre jeu de données actuel, la dernière variable *birds$type* indique de le groupe écologique auquel l'individu appartient. Une idée serait de regrouper tous les individus d'un même groupe en effectuant par exemple la moyenne de leur valeurs pour chaque attribut respectif. On obtiendrait donc un tableau de taille $6 * 11$ (*nombre de groupes * * *nombre de variables*). Dans le cas où l'on ferait une moyenne, on peut considérer que celles-ci soit assez représentatives car nous avons un grand nombre d'individus par groupe et que les valeurs aberrantes (outliers) ont été supprimées précédemment et n'affecteront donc pas les moyennes calculées. Pour obtenir cette table on peut utiliser la fonction *aggregate()*. 
 
 Remarque : Il serait également possible de faire une table basée sur les médianes plutôt les moyennes. 
 
 ```{r tab of mean per ecologic group}
-birds2 = birds[-c(index),] # On enlève les lignes avec des outliers
-meantab <-  aggregate(birds2[,2:11], list(birds2$type), mean)
-colnames(meantab)[1] <- 'ecogroups'
-meantab$ecogroups <- as.numeric(as.factor(meantab$ecogroups))
+meantab <-  aggregate(birds2[,1:10], list(birds2$groups), mean)
+colnames(meantab)[1] <- 'groups'
+meantab$groups <- as.numeric(as.factor(meantab$groups))
 ```
+
 Afin de pouvoir utiliser la variable *ecogroups* dans nos prochains tests multivariés, il faut d'abord la transformer en facteur numérique avec les fonctions *as.numeric( as.factor() )*. Par défaut la conversion se fait par ordre alpha-numérique, ainsi les groupes écologiques deviennent respectivement : **{ P: 1, R: 2, SO: 3, SW: 4, T: 5, W: 6} **^ 
-
-## 3. Analyse factorielle des correspondances (AFC) :
-
-```{r AFC}
-coa.birds <- dudi.coa(meantab[2: 10], scannf = FALSE, nf = 2)
-summary(coa.birds)
-rownames(coa.birds$co)
-scatter(coa.birds)
-```
 
 ```{r dendrogram }
 dbirds <- round(dist(meantab), 3)
@@ -176,4 +187,7 @@ plot(rev(clusty$height), type = 'l',
      ylab = "height", xlab = "", las = 1,
      cex.main = 0.85)
 ```
+
+
+
 
