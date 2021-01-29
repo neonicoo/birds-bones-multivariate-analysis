@@ -119,7 +119,7 @@ boxplot(filtered_sd_bones, horizontal = T, las = 1,
 
 # Analyses Multivariées :
 
-## 1.Analyse en composante principales  (ACP) :
+## 1. Analyse en composante principales  (ACP) :
 
 Lorsque l'on fait le *summary* de l'ACP, on peut d'abord jeter un œil sur les valeurs propres obtenues. Celui-ci nous dit qu'il y a 10 valeurs propres en tout, seul 5 d'entre elles sont montrées.
 
@@ -137,6 +137,11 @@ par(mfrow = c(1, 2))
 s.corcircle(pca.birds$c1, xax =1, yax = 2)
 #scatter(pca.birds)
 ```
+## 2. Création d'une table de contingence :
+
+Pour la suite de ce devoir nous voudrions regrouper les individus par groupes écologiques afin de voir si des groupes peuvent êtres caractérisés par certaines variables. Dans notre jeu de données actuel, la dernière variable *birds$type* indique de le groupe écologique auquel l'individu appartient. Une idée serait de regrouper tous les individus d'un même groupe en effectuant par exemple la moyenne de leur valeurs pour chaque attribut respectif. On obtiendrait donc une table de contingence de taille $6 * 11$ (*nombre de groupes * * *nombre de variables*). Dans le cas où l'on ferait une moyenne, on peut considérer que celles-ci soit assez représentatives car nous avons un grand nombre d'individus par groupe et que les valeurs aberrantes (outliers) ont été supprimées précédemment et n'affecteront donc pas les moyennes calculées. Pour obtenir cette table on peut utiliser la fonction *aggregate()*. 
+
+Remarque : Il serait également possible de faire une table basée sur les médianes plutôt les moyennes. 
 
 ```{r tab of mean per ecologic group}
 birds2 = birds[-c(index),] # On enlève les lignes avec des outliers
@@ -144,11 +149,11 @@ meantab <-  aggregate(birds2[,2:11], list(birds2$type), mean)
 colnames(meantab)[1] <- 'ecogroups'
 meantab$ecogroups <- as.numeric(as.factor(meantab$ecogroups))
 ```
+Afin de pouvoir utiliser la variable *ecogroups* dans nos prochains tests multivariés, il faut d'abord la transformer en facteur numérique avec les fonctions *as.numeric( as.factor() )*. Par défaut la conversion se fait par ordre alpha-numérique, ainsi les groupes écologiques deviennent respectivement : **{ P: 1, R: 2, SO: 3, SW: 4, T: 5, W: 6} **^ 
 
+## 3. Analyse factorielle des correspondances (AFC) :
 
-
-
-```{r}
+```{r AFC}
 coa.birds <- dudi.coa(meantab[2: 10], scannf = FALSE, nf = 2)
 summary(coa.birds)
 rownames(coa.birds$co)
