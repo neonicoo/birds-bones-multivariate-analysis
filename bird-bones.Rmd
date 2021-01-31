@@ -1,8 +1,8 @@
 ---
 title: "Bird's bones"
 author: Nicolas Mendiboure 4BiM
-geometry: "left=1cm, right=1cm, top=1cm, bottom=2cm"
-fontsize: 6pt
+geometry: "left=2cm, right=2cm, top=2cm, bottom=2cm"
+fontsize: 7pt
 output: pdf_document
 ---
 
@@ -92,26 +92,26 @@ On peut commencer par représenter nos données sur un boxplot. On voit tout de 
 Par ailleurs nous observons qu'il existe des points aberrants, appelés aussi *outliers*. Pour les éliminer, nous avons créé une fonction *filter_outliers* (disponible dans le code R) qui stocke dans un index les lignes  comportant des outliers définis selon un seuil arbitraire (dans notre cas : 3). La fonction applique ensuite une suppression des lignes indexées sur le jeu de données voulu et renvoie le jeu et l'indexe avec les lignes comportant des outliers. Le résultat de cette opération est visible dans le 3ème boxplot le plus à droite. 
 
 
-```{r centrage réduction }
+```{r centrage réduction, fig.width=10, echo=FALSE}
 par(mfrow = c(1, 3), mar = c(5, 5, 4, 2) + 0.1 )
 
 
 boxplot(birds[2:11], horizontal = T, las = 1, 
         main = "Avant centrage et reduction",
-        cex.main = 0.75,
+        cex.main = 1,
         col = "lightblue")
 
 
 boxplot(scale(birds[2:11]), horizontal = T, las = 1,
         main = "Apres centrage et reduction",
-        cex.main = 0.75,
+        cex.main = 1,
         col = "lightblue")
 
-index <- filter_outliers(scale(birds[2:10]), limit = 3)
+index <- filter_outliers(scale(birds[2:10]), limit = 4)
 
 boxplot(scale(birds[2:10])[-c(index),], horizontal = T, las = 1,
         main = "Apres suppression des outliers",
-        cex.main = 0.75,
+        cex.main = 1,
         col = "lightblue")
 
 ```
@@ -140,11 +140,11 @@ birds2 <- birds2[-c(index),]
 pca.birds <- dudi.pca(df = birds2[1:10] , scannf = FALSE, nf = 2)
 summary(pca.birds)
 par(mfrow = c(1, 2))
-s.corcircle(pca.birds$c1, xax =1, yax = 2)
+#s.corcircle(pca.birds$c1, xax =1, yax = 2)
 #scatter(pca.birds)
 ```
 
-## 2. Between-Class Analysis (BCA) and Linear Discriminant Analysis (LDA) :
+## 2. Between-Class Analysis (BCA) :
 
 Après avoir effectuer notre Analyse en Composante Principale nous pouvons approfondir notre étude avec un cas particulier de cette ACP, il s'agit de faire une Analyse Interclasse (en anglais Between-Class Analysis BCA). Une ACP permet dans un premier temps de rechercher une combinaison linéaire de variables maximisant la variance totale des données, une BCA permet  également de rechercher la meilleure combinaison linéaire mais qui cette fois maximise la variance entre classes.
 
@@ -156,48 +156,83 @@ bca.birds <- bca(pca.birds, as.factor(birds2$groups), scannf = FALSE, nf = 2)
 ```
 On voit qu'avec notre BCA les 2 premières valeurs propres, et donc les 2 axes de notre repère graphique expliquent à elles seules presque 99% de l'inertie totale des données, contre 92% pour l' ACP.
 
-```{r bca tab}
-bcatab <- bca.birds$tab ; bcatab[, 1:6]
+
+```{r plot bca, echo=FALSE}
+#plot(bca.birds)
 ```
+
+## 3. Linear Discriminant Analysis (LDA) :
+
+```{r lda}
+lda.birds <- discrimin(pca.birds, as.factor(birds2$groups), scannf = FALSE, nf = 2)
+100*lda.birds$eig/sum(lda.birds$eig)
+```
+
+## 4. Tables des moyennes :
+
+```{r mean tabs}
+meantab <-  aggregate(birds2[,1:10], list(birds2$groups), mean)
+pcatab <- aggregate(pca.birds$tab, list(birds2$groups), mean)
+bcatab <- bca.birds$tab 
+
+ldatab <- aggregate( t( (as.matrix(lda.birds$fa) %*% t(as.matrix(lda.birds$li)) ) ), 
+                     list(birds2$groups), mean)[2:11]
+rownames(ldatab) <- as.factor(pcatab$Group.1)
+
+```
+
+
 Voici un tableau (dataframe) qui contient les moyennes de chaque variables , pour chaque classe. On rappel que nos données ont subit un centrage-réduction, c'est pour cela qu'il y a des valeurs négatives.
 
 Par ailleurs il est possible d'obtenir un tel tableau à partir de nos données brutes, sans effectuer d'ACP. En utilisant la fonction *aggregate()* il est possible de regrouper tous les individus par classe respective, et d'obtenir les moyennes correspondantes  à chaque variable :
 
-```{r meantab}
-meantab <-  aggregate(birds2[,1:10], list(birds2$groups), mean); meantab[, 1:6]
-```
 On s'aperçois que certaines valeurs de moyennes sont proches et d'autre moins entre *meantab* et *bcatab*. Pour la suite de notre devoir il sera plus intéressant pour nous d'utiliser *bcatab*, pour calculer des distances par exemple, car celui est issus d'une ACP et maximise donc au mieux les variances entre chaque classe (tout en maximisant l'inertie totale). 
 
 Remarque : Il serait également possible de faire une table basée sur les médianes plutôt que les moyennes (pas d'intérêt ici). 
 
-```{r plot bca}
-plot(bca.birds)
+## 5. Distances et clustering :
+
+```{r clustering }
+dbirds_bet <- round(dist(bcatab), 3)
+dbirds_discrim <- round(dist(ldatab), 3)
+
+pco.birds_bet <- dudi.pco(dbirds_bet, scannf = FALSE)
+pco.birds_discrim <- dudi.pco(dbirds_discrim, scannf = FALSE)
+
+clusty_bet <- hclust(dbirds_bet, "complete")
+clusty_discrim <- hclust(dbirds_discrim, "complete")
 ```
 
-```{r dendrogram }
-dbirds <- round(dist(bca.birds$tab), 3)
-pco.birds <- dudi.pco(dbirds, scannf = FALSE)
-summary(pco.birds)
-#scatter(pco.birds)
+## 6. Affichages :
 
-clusty <- hclust(dbirds, "complete")
-par(mfrow = c(1, 2))
-
-plot(clusty, main = "Dendrogram of ecologic classes of birds", cex.main = 0.85, cex = 0.75, xlab = "")
+```{r s.arrow(), fig.height=2.25, fig.width=2.25, echo=FALSE}
+par(mfrow=c(1,3))
+s.arrow(pca.birds$c1)
+s.arrow(bca.birds$c1)
+s.arrow(lda.birds$fa)
 ```
 
-
-
-
-```{r afc bet dis, fig.height=2.5, fig.width=2.5, echo=FALSE}
-lda <- discrimin(pca.birds, as.factor(birds2$groups), scannf = FALSE, nf = 2)
-
-par(mfrow=c(2,3))
-s.label(pca.birds$c1)
-s.label(bca.birds$c1)
-s.label(lda$fa)
+```{r s.class, fig.height=2.25, fig.width=2.25, echo=FALSE}
+par(mfrow=c(1,3))
 s.class(pca.birds$li, as.factor(birds2$groups))
 s.class(bca.birds$ls,as.factor(birds2$groups))
-s.class(lda$li,as.factor(birds2$groups))
+s.class(lda.birds$li,as.factor(birds2$groups))
 ```
 
+
+```{r dendrograms, echo=FALSE}
+par(mfrow = c(1, 2))
+
+plot(clusty_bet, main = "Dendrogram of between classes analysis", 
+     cex.main = 0.85, cex = 0.75, xlab = "", sub = "")
+plot(clusty_discrim, main = "Dendrogram of discriminant classes  analysis ", 
+     cex.main = 0.85, cex = 0.75, xlab = "", sub="")
+```
+
+
+```{r scatter, fig.height=2.5, fig.width=2.5, echo=FALSE}
+par(mfrow=c(1,2))
+
+scatter(pco.birds_bet)
+scatter(pco.birds_discrim)
+```
