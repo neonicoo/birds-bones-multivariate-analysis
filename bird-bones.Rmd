@@ -189,4 +189,15 @@ plot(clusty, main = "Dendrogram of ecologic classes of birds", cex.main = 0.85, 
 
 
 
+```{r afc bet dis, fig.height=2.5, fig.width=2.5, echo=FALSE}
+lda <- discrimin(pca.birds, as.factor(birds2$groups), scannf = FALSE, nf = 2)
+
+par(mfrow=c(2,3))
+s.label(pca.birds$c1)
+s.label(bca.birds$c1)
+s.label(lda$fa)
+s.class(pca.birds$li, as.factor(birds2$groups))
+s.class(bca.birds$ls,as.factor(birds2$groups))
+s.class(lda$li,as.factor(birds2$groups))
+```
 
