@@ -47,7 +47,7 @@ Les 10 mesures sont les suivantes (en milimètre) :
 
 Ce jeu de données est fourni par le Dr. D.Liu du Musée Naturel d'Hisoire de Pékin.
 
-# Visualisation des données :
+# Visualisation et filtrage  des données :
 
 Il faut s'assurer de bien effacer les variables stockées dans R avant de commencer :
 
@@ -129,6 +129,7 @@ Sur le premier facteur nos 10 variables pointent toutes du même coté. Cela est
 
 Pour le deuxième facteur, on voit que nous avons autant de variables de part et d'autre de l'axe horizontal, cinq au dessus et cinq dessous. En dessous nous avons les variables relatives à l'os ulna et à l'humérus ce qui correspondrait plutôt au membre supérieur des oiseaux tandis qu'au dessus de l'axe horizontal nous voyons les variables concernant les mesures sur les os du fémur et du tibiotarse et du tarso-métatarse (pied), soit au membre inférieur de l'oiseau. 
 
+
 ```{r birds2}
 birds2 <- birds[, 2:12]
 birds2[, 1:10] <- scale(birds2[, 1:10])
@@ -138,17 +139,27 @@ birds2 <- birds2[-c(index),]
 
 ```{r ACP, fig.height=4, fig.width=4}
 pca.birds <- dudi.pca(df = birds2[1:10] , scannf = FALSE, nf = 2)
-summary(pca.birds)
-par(mfrow = c(1, 2))
+#summary(pca.birds)
+
+100*pca.birds$eig/sum(pca.birds$eig)
+```
+```{r plot ACP, echo=FALSE}
+#par(mfrow = c(1, 2))
+
 #s.corcircle(pca.birds$c1, xax =1, yax = 2)
 #scatter(pca.birds)
 ```
 
-## 2. Between-Class Analysis (BCA) :
 
-Après avoir effectuer notre Analyse en Composante Principale nous pouvons approfondir notre étude avec un cas particulier de cette ACP, il s'agit de faire une Analyse Interclasse (en anglais Between-Class Analysis BCA). Une ACP permet dans un premier temps de rechercher une combinaison linéaire de variables maximisant la variance totale des données, une BCA permet  également de rechercher la meilleure combinaison linéaire mais qui cette fois maximise la variance entre classes.
+## 2. Between-Class Analysis (BCA) et Linear Discriminant Analysis (LDA)  :
 
-Ainsi cette analyse va nous donner la possibilité de superposer la variable "groups" contenant les groupes écologiques de chaque individu, sur notre ACP. Avec ça nous verrons quelles classes d'individus sont proches ou éloignées les unes des autres, mais également  quels sont les attributs (longueur ou largeur d'os) qui peuvent caractériser une classe plûtot qu'un autre.
+Après avoir effectuer notre Analyse en Composante Principale nous pouvons approfondir notre étude avec 2 cas particuliers de cette ACP. Ces 2 analyses auront notamment pour objectif d'identifier les variables qui séparent les classes d'individus. Cependant elles diffèrent sur leur critère de maximisation de la variance.
+
+En premier lieu il est possible de réaliser une analyse inter-classe (BCA), celle-ci vise à chercher des axes sur la base de la variabilité inter-classe, de sorte à ce que celle-ci se retrouve maximisée. En pratique, l'analyse inter-classe peut s'utiliser quand on a beaucoup de variables par rapport au nombre d'individus.
+
+La seconde analyse, qui est une analyse discriminante (LDA), consiste, elle, à maximiser le rapport $\frac{\sigma^{2}_{ inter-classe}}{\sigma^{2}_{totale}}$ ($\sigma^2$ désignant la variance).  En pratique, l'analyse inter-classe peut s'utiliser quand on a beaucoup de d'individus par rapport au nombre de variables.
+
+### BCA :
 
 ```{r BCA}
 bca.birds <- bca(pca.birds, as.factor(birds2$groups), scannf = FALSE, nf = 2)
@@ -156,63 +167,24 @@ bca.birds <- bca(pca.birds, as.factor(birds2$groups), scannf = FALSE, nf = 2)
 ```
 On voit qu'avec notre BCA les 2 premières valeurs propres, et donc les 2 axes de notre repère graphique expliquent à elles seules presque 99% de l'inertie totale des données, contre 92% pour l' ACP.
 
-
 ```{r plot bca, echo=FALSE}
 #plot(bca.birds)
 ```
 
-## 3. Linear Discriminant Analysis (LDA) :
+### LDA :
 
 ```{r lda}
 lda.birds <- discrimin(pca.birds, as.factor(birds2$groups), scannf = FALSE, nf = 2)
 100*lda.birds$eig/sum(lda.birds$eig)
 ```
-
-## 4. Tables des moyennes :
-
-```{r mean tabs}
-meantab <-  aggregate(birds2[,1:10], list(birds2$groups), mean)
-pcatab <- aggregate(pca.birds$tab, list(birds2$groups), mean)
-bcatab <- bca.birds$tab 
-
-ldatab <- aggregate( t( (as.matrix(lda.birds$fa) %*% t(as.matrix(lda.birds$li)) ) ), 
-                     list(birds2$groups), mean)[2:11]
-rownames(ldatab) <- as.factor(pcatab$Group.1)
-
-```
-
-
-Voici un tableau (dataframe) qui contient les moyennes de chaque variables , pour chaque classe. On rappel que nos données ont subit un centrage-réduction, c'est pour cela qu'il y a des valeurs négatives.
-
-Par ailleurs il est possible d'obtenir un tel tableau à partir de nos données brutes, sans effectuer d'ACP. En utilisant la fonction *aggregate()* il est possible de regrouper tous les individus par classe respective, et d'obtenir les moyennes correspondantes  à chaque variable :
-
-On s'aperçois que certaines valeurs de moyennes sont proches et d'autre moins entre *meantab* et *bcatab*. Pour la suite de notre devoir il sera plus intéressant pour nous d'utiliser *bcatab*, pour calculer des distances par exemple, car celui est issus d'une ACP et maximise donc au mieux les variances entre chaque classe (tout en maximisant l'inertie totale). 
-
-Remarque : Il serait également possible de faire une table basée sur les médianes plutôt que les moyennes (pas d'intérêt ici). 
-
-## 5. Distances et clustering :
-
-```{r clustering }
-dbirds_bet <- round(dist(bcatab), 3)
-dbirds_discrim <- round(dist(ldatab), 3)
-
-pco.birds_bet <- dudi.pco(dbirds_bet, scannf = FALSE)
-pco.birds_discrim <- dudi.pco(dbirds_discrim, scannf = FALSE)
-
-clusty_bet <- hclust(dbirds_bet, "complete")
-clusty_discrim <- hclust(dbirds_discrim, "complete")
-```
-
-## 6. Affichages :
-
-```{r s.arrow(), fig.height=2.25, fig.width=2.25, echo=FALSE}
+```{r s.arrow(), fig.height=2, fig.width=2.5, echo=FALSE}
 par(mfrow=c(1,3))
 s.arrow(pca.birds$c1)
 s.arrow(bca.birds$c1)
 s.arrow(lda.birds$fa)
 ```
 
-```{r s.class, fig.height=2.25, fig.width=2.25, echo=FALSE}
+```{r s.class, fig.height=2, fig.width=2.5, echo=FALSE}
 par(mfrow=c(1,3))
 s.class(pca.birds$li, as.factor(birds2$groups))
 s.class(bca.birds$ls,as.factor(birds2$groups))
@@ -220,19 +192,78 @@ s.class(lda.birds$li,as.factor(birds2$groups))
 ```
 
 
-```{r dendrograms, echo=FALSE}
-par(mfrow = c(1, 2))
+### 3. Tables des moyennes :
 
-plot(clusty_bet, main = "Dendrogram of between classes analysis", 
-     cex.main = 0.85, cex = 0.75, xlab = "", sub = "")
-plot(clusty_discrim, main = "Dendrogram of discriminant classes  analysis ", 
-     cex.main = 0.85, cex = 0.75, xlab = "", sub="")
+```{r mean tabs}
+meantab <-  aggregate(birds2[,1:10], list(birds2$groups), mean)
+pcatab <- aggregate(pca.birds$tab, list(birds2$groups), mean) 
+bcatab <- bca.birds$tab 
+
+ldatab <- aggregate( t( (as.matrix(lda.birds$fa) %*% t(as.matrix(lda.birds$li)) ) ), 
+                     list(birds2$groups), mean)[2:11]
+rownames(ldatab) <- as.factor(pcatab$Group.1)
+```
+
+A présent nous désirons afficher les résultats des différentes analyses sous forme de tableau de la forme [classes * variables]. En d'autres termes cela signifie avoir pour chaque classe d'individus, la moyenne de tous les individus pour chaque variable. 
+
+Pour nos données brutes et celles issus de la PCA, nous pouvons par exemple utiliser la fonction *aggregate()* pour obtenir un tel tableau (variables *meantab* et *pcatab*). 
+
+Pour la BCA, le tableau et directement fournie par la fonction. On remarque q'uil s'agit du même tableau que celui que nous avons construit à partir des résultats de l'ACP, ce qui est cohérent puisque la BCA est un cas particulier de l'ACP. 
+
+Pour la LDA nous effectuons un multiplication des matrices *lda$fa* contenant les poids des variables et *lda$li* qui contient les scores par individus, puis nous utilisons la fonction *aggregate()* à nouveau. 
+
+
+
+## 4. Distances :
+
+```{r distances }
+dbirds_bet <- round(dist(bcatab), 3)
+dbirds_discrim <- round(dist(ldatab), 3)
+dbirds_var <- round((dist(t(birds2[1:10]))), 2)
 ```
 
 
-```{r scatter, fig.height=2.5, fig.width=2.5, echo=FALSE}
-par(mfrow=c(1,2))
+
+
+## 5. Analyse Principale en Coordonnées (PCO) :
+
+```{r pco}
+pco.birds_bet <- dudi.pco(dbirds_bet, scannf = FALSE, nf = 2)
+pco.birds_discrim <- dudi.pco(dbirds_discrim, scannf = FALSE, nf = 2)
+pco.variables <- dudi.pco(dbirds_var, scannf = FALSE, nf = 2)
+```
+
+```{r plots pco, fig.height=2, fig.width=2.5, echo=FALSE}
+
+par(mfrow=c(1,3))
 
 scatter(pco.birds_bet)
 scatter(pco.birds_discrim)
+scatter(pco.variables)
 ```
+
+
+
+## 6. Clustering & dendrograms:
+
+```{r clustering }
+clusty_bet <- hclust(dbirds_bet, "complete")
+clusty_discrim <- hclust(dbirds_discrim, "complete")
+clusty_var <- hclust(dbirds_var, "complete")
+```
+
+```{r dendrograms, echo=FALSE}
+par(mfrow = c(1, 3))
+
+plot(clusty_bet, main = "Dendrogram of between classes analysis", 
+     cex.main = 0.85, cex = 0.75, xlab = "", sub = "")
+
+plot(clusty_discrim, main = "Dendrogram of discriminant classes  analysis ", 
+     cex.main = 0.85, cex = 0.75, xlab = "", sub="")
+
+plot(clusty_var, main = "Dendrogram of variables analysis", 
+     cex.main = 0.85, cex = 0.75, xlab = "", sub = "")
+```
+
+# Interprétation(s) et conclusion :
+
