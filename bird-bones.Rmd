@@ -1,8 +1,8 @@
 ---
 title: "Bird's bones"
 author: Nicolas Mendiboure 4BiM
-geometry: "left=2cm, right=2cm, top=2cm, bottom=2cm"
-fontsize: 7pt
+geometry: "left=2.5cm, right=2.5cm, top=2cm, bottom=2cm"
+fontsize: 9pt
 output: pdf_document
 ---
 
@@ -175,6 +175,7 @@ On voit qu'avec notre BCA les 2 premières valeurs propres, et donc les 2 axes d
 
 ```{r lda}
 lda.birds <- discrimin(pca.birds, as.factor(birds2$groups), scannf = FALSE, nf = 2)
+wdis <- lda.birds$fa / sqrt( sum(lda.birds$fa**2))    # normalised weights
 100*lda.birds$eig/sum(lda.birds$eig)
 ```
 ```{r s.arrow(), fig.height=2, fig.width=2.5, echo=FALSE}
@@ -199,7 +200,7 @@ meantab <-  aggregate(birds2[,1:10], list(birds2$groups), mean)
 pcatab <- aggregate(pca.birds$tab, list(birds2$groups), mean) 
 bcatab <- bca.birds$tab 
 
-ldatab <- aggregate( t( (as.matrix(lda.birds$fa) %*% t(as.matrix(lda.birds$li)) ) ), 
+ldatab <- aggregate( t( (as.matrix( (wdis ) )  %*% t(as.matrix(lda.birds$li)) ) ), 
                      list(birds2$groups), mean)[2:11]
 rownames(ldatab) <- as.factor(pcatab$Group.1)
 ```
@@ -213,24 +214,12 @@ Pour la BCA, le tableau et directement fournie par la fonction. On remarque q'ui
 Pour la LDA nous effectuons un multiplication des matrices *lda$fa* contenant les poids des variables et *lda$li* qui contient les scores par individus, puis nous utilisons la fonction *aggregate()* à nouveau. 
 
 
+## 4. Analyse Principale en Coordonnées (PCO) :
 
-## 4. Distances :
-
-```{r distances }
-dbirds_bet <- round(dist(bcatab), 3)
-dbirds_discrim <- round(dist(ldatab), 3)
-dbirds_var <- round((dist(t(birds2[1:10]))), 2)
-```
-
-
-
-
-## 5. Analyse Principale en Coordonnées (PCO) :
-
-```{r pco}
-pco.birds_bet <- dudi.pco(dbirds_bet, scannf = FALSE, nf = 2)
-pco.birds_discrim <- dudi.pco(dbirds_discrim, scannf = FALSE, nf = 2)
-pco.variables <- dudi.pco(dbirds_var, scannf = FALSE, nf = 2)
+```{r pco, warning=FALSE}
+pco.birds_bet <- dudi.pco(dist(bcatab)**2, scannf = FALSE, nf = 2)
+pco.birds_discrim <- dudi.pco(dist(ldatab)**2, scannf = FALSE, nf = 2)
+pco.variables <- dudi.pco(dist(t(birds2[,-11]))**2, scannf = FALSE, nf = 2)
 ```
 
 ```{r plots pco, fig.height=2, fig.width=2.5, echo=FALSE}
@@ -243,13 +232,12 @@ scatter(pco.variables)
 ```
 
 
-
-## 6. Clustering & dendrograms:
+## 5. Clustering & dendrograms:
 
 ```{r clustering }
-clusty_bet <- hclust(dbirds_bet, "complete")
-clusty_discrim <- hclust(dbirds_discrim, "complete")
-clusty_var <- hclust(dbirds_var, "complete")
+clusty_bet <- hclust(dist(bcatab)**2, "complete")
+clusty_discrim <- hclust(dist(ldatab)**2, "complete")
+clusty_var <- hclust(dist(t(birds2[,-11]))**2, "complete")
 ```
 
 ```{r dendrograms, echo=FALSE}
@@ -264,6 +252,7 @@ plot(clusty_discrim, main = "Dendrogram of discriminant classes  analysis ",
 plot(clusty_var, main = "Dendrogram of variables analysis", 
      cex.main = 0.85, cex = 0.75, xlab = "", sub = "")
 ```
+
 
 # Interprétation(s) et conclusion :
 
