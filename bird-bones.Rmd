@@ -263,14 +263,21 @@ scatter(pco.variables)
 ```
 
 
-## 5. Clustering & dendrograms:
+## 5. Clustering hiérarchique:
 
+Le clustering est une autre méthode d'analyse pour nos données, celle ci est basée sur le partitionnement des données et vise à diviser notre ensemble de données en paquets ou sous-ensembles homogènes, de façon à ce que tous les individus d'un même sous ensemble partagent un maximum de caractéristiques en commun, on désigne ces caractéristiques comme étant des critères de proximité.
+
+Pour le clustering hiérarchique, le paramètre de comparaison est choisi à l'avance, ensuite des distances euclidiennes sont calculées, et les individus (ou variables si c'est qui est comparée) les plus proches, sont liées deux à deux jusqu'à obtenir une diagramme hiérarchisé nommé **dendrogramme**. Pour ce faire nous allons donc utiliser les mêmes matrices de distances que pour les PCO.
+
+Nous avons donc réalisé 4 classifications : Pour la première nous avons comparés tous les individus entre eux (matrice *birds2*), la deuxième nous avons comparé les 10 variables de tailles entre elle (matrice *t(birds2)*), la troisième nous avons comparé directement les 6 classes écologiques d'oiseaux selon leurs moyennes dans chaques variables obtenue par la BCA et la quatrième est issues de l'ADL. 
+
+Comme vous pouvez le voir dans le champs "method" de la fonction *hclust()* nous avons choisi la méthode du **complete** linkage. Celle - ci est l'opposée du **single** linkage et correspond au choix du "pire des cas". Ici on choisit comme représentant de chaque sous ensemble l'individu le moins similaire des individus d'un autre sous ensemble. Ainsi la similarité entre les paquets (ou clusters) est le minimum de la similarité entre les individus des paquets. 
 
 ```{r clustering }
-clusty_bet <- hclust(dist(bcatab) , "complete")
-clusty_discrim <- hclust( dist(ldatab) , "complete")
-clusty_var <- hclust(dist(t(birds2[,-11])) , "complete")
-clusty_indv <- hclust(dist(birds2[1:10]) , "complete")
+clusty_var <- hclust(dist(t(birds2[,-11])) , method = "complete")
+clusty_indv <- hclust(dist(birds2[1:10]) , method = "complete")
+clusty_bet <- hclust(dist(bcatab) , method = "complete")
+clusty_discrim <- hclust( dist(ldatab) , method = "complete")
 ```
 
 ```{r dendrograms indiv and variables , fig.height=4, fig.width=8, echo=FALSE}
@@ -296,5 +303,16 @@ plot(clusty_discrim, main = "Dendrogram of discriminant classes  analysis ",
      cex.main = 0.85, cex = 0.75, xlab = "", sub="")
 ```
 
-# Interprétation(s) et conclusion :
+# Interprétations et conclusion :
 
+Tout d'abord et d'un point de vu purement graphique et visuel, nous voyons que les résultats issus de l'analyse BCA offrent une meilleure cohérence et correspondance avec les résultats d'analyse (PCO et regroupements hiérarchiques) faits directement sur les variables et les individus. Cela s'explique d'une part avec les valeurs propres obtenues pour la BCA : 99% d'inertie expliquée contre 74% pour l'ADL, et d'autre part parce que nous travaillons sur un nombre de variables (11 en tout), légèrement grand et qui peut donc avoir son importance dans l'analyse en favorisant dans la pratique une analyse BCA plutôt que ADL (cela reste néanmoins une hypothèse). 
+
+À présent nous allons essayer de caractériser les 6 types d'oiseaux présents dans le jeu de donnée selon les différentes variables de tailles en utilisant tous les résultats d'analyses obtenus jusqu'ici. En cas d'ambiguïté nous privilégierons les résultats de la BCA plutôt que ceux l'ADL.
+
+- Les classes d'oiseaux grimpeurs (P) et d'oiseaux Chanteurs (SO) sont des classes très proches, cette proximité est observable sur tous les graphiques. Ces classes sont caractérisées par les longueurs et diamètres de l'humérus et de l'ulna, soit de façon globale par les membres supérieurs des oiseaux.
+
+- Les classes d'oiseaux raptors (R) et d'oiseaux nageurs (SW) sont elles aussi assez proches sur nos graphiques. Elles notamment caractérisées par la longueur du tibiotarse et du tarso-métatarse, soit aux parties basses des membres inférieurs. 
+
+- La classe des oiseaux terrestres (T) est caractérisé par la longueur et le diamètre du fémur, mais également un peu par le diamètre du tarso-métatarse.
+
+- Enfin la dernière classe d'oiseaux échassiers (W) est caractérisée par la longueur et le diamètre des tibiotarse mais aussi par le diamètre du fémur.
